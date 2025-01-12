@@ -17,4 +17,4 @@ Please consult the following resources for further information:
 
 Clingo is distributed under the [MIT License](LICENSE.md).
 
-Insurance.txt is the solution for the min-max insurance referee problem described in the pdf
+Insurance.txt is the solution for the min-max insurance referee problem in description.pdf
