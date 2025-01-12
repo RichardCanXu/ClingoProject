@@ -1,0 +1,94 @@
+%%%%%%%%%%%%%%%%%%%%%%%%
+% Generate Search space 
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+1 {assign(Cid, Rid) : referee(Rid, Ref_type, Max_workload, Prev_workload, Prev_payment)} 1  :- case(Cid, Case_type, Effort, Damage, Postc, Payment).
+
+%%%%%%%%%%%%%%%%%%%%
+% Hard Constraints 
+%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% The maximum number of working minutes of a 
+% referee must not be exceeded by the actual 
+% workload, where the actual workload is the 
+% sum of the efforts of all cases assigned to 
+% this referee.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+:- ref_work_sum = #sum{Effort, Rid, Cid : assign(Cid, Rid), case(Cid, Case_type, Effort, Damage, Postc, Payment)}, referee(Rid, Ref_type, Max_workload, Prev_workload, Prev_payment), ref_work_sum > Max_workload.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% A case must not be assigned to a referee who 
+% is not in charge of the region at all.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+:- assign(Cid, Rid), referee(Rid, Ref_type, Max_workload, Prev_workload, Prev_payment), case(Cid, Case_type, Effort, Damage, Postc, Payment), prefRegion(Rid, Postc, 0).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% A case must not be assigned to a referee who 
+% is not in charge of the type of the case at all.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+:- assign(Cid, Rid), referee(Rid, Ref_type, Max_workload, Prev_workload, Prev_payment), case(Cid, Case_type, Effort, Damage, Postc, Payment), prefType(Rid, Case_type, 0).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Cases with an amount of damage that exceeds a certain 
+% threshold can only be assigned to internal referees.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+:- assign(Cid, Rid), referee(Rid, Ref_type, Max_workload, Prev_workload, Prev_payment), case(Cid, Case_type, Effort, Damage, Postc, Payment), Ref_type == e , externalMaxDamage(D), Damage > D.
+
+%%%%%%%%%%%%%%%%%%%%
+% Weak Constraints 
+%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Internal referees are preferred in order 
+% to minimize the costs of external ones.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+internal_num(N) :- N = #count{ 1 , Rid : assign(Cid, Rid), referee(Rid, Ref_type, Max_workload, Prev_workload, Prev_payment) , Ref_type == i}.
+#maximize{N: internal_num(N)}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% The assignment of cases to external referees 
+% should be fair in the sense that their overall 
+% payment should be balanced.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+payment(Rid , Pay) :- Pay =  #sum{Payment, Rid, Cid:assign(Cid, Rid) , case(Cid, Case_type, Effort, Damage, Postc, Payment)}, referee(Rid, Ref_type, Max_workload, Prev_workload, Prev_payment), Ref_type == e.
+total_payment(Rid, M) :- M = Prev_payment + Pay, referee(Rid, Ref_type, Max_workload, Prev_workload, Prev_payment), payment(Rid, Pay), Ref_type == e.
+min_payment(M_1) :- total_payment(Rid_1, M_1), 0 == #count{1,Rid_2 : M_1 > M_2, total_payment(Rid_2, M_2)}, total_payment(Rid_1, M_1).
+max_payment(M_1) :- total_payment(Rid_1, M_1), 0 == #count{1,Rid_2 : M_1 < M_2, total_payment(Rid_2, M_2)}, total_payment(Rid_1, M_1).
+
+payment_diff(Euros) :- Euros = (Max - Min), max_payment(Max), min_payment(Min).
+
+#minimize{Euros, Cid, Rid : payment_diff(Euros), assign(Cid, Rid), referee(Rid, Ref_type, Max_workload, Prev_workload, Prev_payment), case(Cid, Case_type, Effort, Damage, Postc, Payment)}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% The assignment of cases to (internal and external) 
+% referees should be fair in the sense that their 
+% overall workload should be balanced.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+work(Rid, W) :-  W =  #sum{Effort, Rid , Cid : assign(Cid, Rid) , case(Cid, Case_type, Effort, Damage, Postc, Payment)}, referee(Rid, Ref_type, Max_workload, Prev_workload, Prev_payment).
+total_workload(Rid, Total_Work) :- Total_Work = Prev_workload + Case_Work, referee(Rid, Ref_type, Max_workload, Prev_workload, Prev_payment), work(Rid, Case_Work).
+min_work(Total_Work_1) :- total_workload(Rid_1, Total_Work_1), 0 == #count{1, Rid_2 : Total_Work_1 > Total_Work_2, total_workload(Rid_2, Total_Work_2)}, total_workload(Rid_1, Total_Work_1).
+max_work(Total_Work_1) :- total_workload(Rid_1, Total_Work_1), 0 == #count{1, Rid_2 : Total_Work_1 < Total_Work_2, total_workload(Rid_2, Total_Work_2)}, total_workload(Rid_1, Total_Work_1).
+work_diff(Minutes) :- Minutes = (Max - Min), max_work(Max), min_work(Min).
+
+#minimize{Minutes, Cid, Rid : work_diff(Minutes), assign(Cid, Rid), referee(Rid, Ref_type, Max_workload, Prev_workload, Prev_payment), case(Cid, Case_type, Effort, Damage, Postc, Payment)}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Referees should handle types of cases 
+% and regions with higher preference.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#maximize{Case_Pref + Region_Pref, Rid: assign(Cid, Rid), referee(Rid, Ref_type, Max_workload, Prev_workload, Prev_payment), case(Cid, Case_type, Effort, Damage, Postc, Payment), prefRegion(Rid, Postc, Region_Pref), prefType(Rid, Case_type, Case_Pref)}.
+
+%%%%%%%%%%%%%%%%%%%
+% Show Assignment %
+%%%%%%%%%%%%%%%%%%%
+
+#show assign/2.

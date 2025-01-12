@@ -1,0 +1,11 @@
+% Set Size
+a(1..n,1..n).
+
+% Define the set of possible positions for bishops
+{ bishop(R,C): a(R,C) }.
+
+% No bishop attack another
+:- bishop(R1,C1), bishop(R2,C2), R1!=R2, |R1-R2|=|C1-C2|.
+
+% Find the maximum number of non-attacking bishops that can be placed on the board
+#maximize { 1, a(R,C): bishop(R,C) }.
