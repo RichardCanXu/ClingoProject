@@ -17,13 +17,4 @@ Please consult the following resources for further information:
 
 Clingo is distributed under the [MIT License](LICENSE.md).
 
-## Contents of Windows Binary Release
-
-The `clingo.exe` and `gringo.exe` binaries are compiled with Lua 5.3 but
-without Python support.
-
-- `clingo.exe`: solver for non-ground programs
-- `gringo.exe`: grounder
-- `clasp.exe`: solver for ground programs
-- `reify.exe`: reifier for ground programs
-- `lpconvert.exe`: translator for ground formats
+Insurance.txt is the solution for the min-max insurance referee problem described in the pdf
